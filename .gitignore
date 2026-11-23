@@ -1,0 +1,15 @@
+# Dependencias y compilaciones
+node_modules/
+.DS_Store
+
+# Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.idsig
+*.aab
+*.iml
+*.keystore
+android/.idea/

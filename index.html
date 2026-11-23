@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GeoBandits</title>
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+  <link rel="apple-touch-icon" href="assets/icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ================= PANTALLA DE INICIO / MENÚ PRINCIPAL ================= -->
+  <section id="menu-screen" class="screen active">
+    <div class="menu-container">
+      <header class="hero-header">
+        <div class="hero-brand-row">
+          <img src="assets/icon.png" alt="GeoBandits" class="hero-app-icon" />
+          <div class="hero-title-col">
+            <h1 class="game-title">GEO<span>BANDITS</span></h1>
+            <span class="badge-pill">🌍 197 PAÍSES Y CAPITALES</span>
+          </div>
+        </div>
+
+        <!-- Selector rápido: Mixto, Países o Capitales -->
+        <div class="qm-pills">
+          <button id="qm-mixed" class="qm-btn active" onclick="setQuestionMode('mixed')">🎲 Mixto</button>
+          <button id="qm-country" class="qm-btn" onclick="setQuestionMode('country')">🗺️ Países</button>
+          <button id="qm-capital" class="qm-btn" onclick="setQuestionMode('capital')">🏛️ Capitales</button>
+        </div>
+      </header>
+
+      <!-- 3 Botones Visuales de Modo de Juego -->
+      <div class="modes-grid">
+        <button class="mode-card mode-train" onclick="openTrainingSetup()">
+          <span class="mode-icon">🧭</span>
+          <div class="mode-info">
+            <h2>Entrenamiento</h2>
+            <span>Práctica libre por continentes</span>
+          </div>
+        </button>
+
+        <button class="mode-card mode-battle" onclick="openBanditSelector()">
+          <span class="mode-icon">⚔️</span>
+          <div class="mode-info">
+            <h2>Batalla 1 vs 1</h2>
+            <span>Elige rival y compite por vida</span>
+          </div>
+        </button>
+
+        <button class="mode-card mode-knockout" onclick="startKnockoutMode()">
+          <span class="mode-icon">🏆</span>
+          <div class="mode-info">
+            <h2>Torneo Knock-Out</h2>
+            <span>Vence a los 5 jefes seguidos</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Acceso directo a los 5 Bandidos -->
+      <div class="roster-preview">
+        <h3>🏴‍☠️ Toca un Bandido para luchar:</h3>
+        <div id="menu-bandit-strip" class="bandit-strip"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MODAL: ELEGIR BANDIDO ================= -->
+  <div id="bandit-modal" class="modal-overlay hidden">
+    <div class="modal-box wide-modal">
+      <div class="modal-header">
+        <h2>⚔️ Elige tu Rival</h2>
+        <button class="close-btn" onclick="closeModals()">✕</button>
+      </div>
+      <div id="bandit-select-grid" class="bandit-select-grid"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ELEGIR CONTINENTE (ENTRENAMIENTO) ================= -->
+  <div id="training-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>🧭 Elige Continente</h2>
+        <button class="close-btn" onclick="closeModals()">✕</button>
+      </div>
+      <div class="continent-grid">
+        <button class="continent-btn" onclick="startTrainingMode('Todos')">🌍 Todo el Mundo</button>
+        <button class="continent-btn" onclick="startTrainingMode('Europa')">🏰 Europa</button>
+        <button class="continent-btn" onclick="startTrainingMode('América')">🗽 América</button>
+        <button class="continent-btn" onclick="startTrainingMode('Asia')">🐉 Asia</button>
+        <button class="continent-btn" onclick="startTrainingMode('África')">🦁 África</button>
+        <button class="continent-btn" onclick="startTrainingMode('Oceanía')">🦘 Oceanía</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PANTALLA DE JUEGO ================= -->
+  <section id="game-screen" class="screen">
+    <!-- CABECERA COMPACTA DE 2 FILAS: SIEMPRE VISIBLE -->
+    <header class="hud-header">
+      <!-- FILA 1: TÚ vs BANDIDO + BOTÓN SALIR -->
+      <div class="versus-bar">
+        <!-- Jugador -->
+        <div class="fighter-pill player-pill">
+          <div class="mini-avatar player-mini">🕵️‍♂️</div>
+          <div class="mini-info">
+            <div class="mini-top">
+              <span class="mini-name">Tú</span>
+              <span id="player-hp-text" class="mini-hp">1000</span>
+            </div>
+            <div class="hp-bar-outer">
+              <div id="player-hp-fill" class="hp-bar-fill player-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Centro: VS + Ronda + Salir -->
+        <div class="center-controls">
+          <button class="exit-btn" onclick="returnToMenu()" title="Volver al menú">🏠</button>
+          <span id="round-counter" class="round-pill">R1</span>
+        </div>
+
+        <!-- Bandido Rival -->
+        <div class="fighter-pill enemy-pill">
+          <div class="mini-info right">
+            <div class="mini-top">
+              <span id="enemy-hp-text" class="mini-hp">1000</span>
+              <span id="enemy-name" class="mini-name">Brújula Rota</span>
+            </div>
+            <div class="hp-bar-outer">
+              <div id="enemy-hp-fill" class="hp-bar-fill enemy-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+          <div class="mini-avatar enemy-mini">
+            <img id="enemy-avatar" src="assets/bandit1.jpg" alt="Bandido" />
+          </div>
+        </div>
+      </div>
+
+      <!-- FILA 2: PAÍS O CAPITAL A ADIVINAR (GRANDE Y CLARO) -->
+      <div class="target-bar">
+        <span id="target-flag" class="target-flag">🇪🇸</span>
+        <div class="target-main-text">
+          <span id="target-type-label" class="target-type-badge">PAÍS</span>
+          <h2 id="target-name">España</h2>
+        </div>
+        <button class="clue-toggle-btn" onclick="toggleCluePopup()" title="Ver pista">💡</button>
+      </div>
+
+      <!-- Pista desplegable solo si se pulsa la bombilla (no ocupa pantalla por defecto) -->
+      <div id="target-clue-box" class="clue-dropdown hidden">
+        <span id="target-clue">Pista aquí</span>
+        <span id="player-badges" class="active-perks"></span>
+        <span id="enemy-quote" class="hidden"></span>
+        <span id="game-mode-pill" class="hidden"></span>
+      </div>
+    </header>
+
+    <!-- ÁREA DEL MAPA -->
+    <div class="map-stage">
+      <div id="world-map"></div>
+
+      <!-- Botones de ayuda a la izquierda (Solo iconos grandes y claros) -->
+      <div class="powerups-dock">
+        <button id="btn-power-radar" class="power-btn" onclick="useRadarPowerup()" title="Lupa Radar">
+          <span class="p-icon">🔎</span>
+          <span id="radar-count" class="p-count">2</span>
+        </button>
+        <button id="btn-power-smoke" class="power-btn" onclick="useSmokePowerup()" title="Bomba de Humo">
+          <span class="p-icon">💨</span>
+          <span id="smoke-count" class="p-count">1</span>
+        </button>
+        <button class="power-btn" onclick="resetMapView()" title="Centrar Mapa">
+          <span class="p-icon">🌐</span>
+        </button>
+        <button class="power-btn" onclick="toggleMapTheme()" title="Cambiar Mapa">
+          <span class="p-icon">🗺️</span>
+          <span id="map-theme-label" class="hidden">Vista Atlas</span>
+        </button>
+      </div>
+
+      <!-- Botón de Lanzar Pin (Separado de la barra inferior de Android) -->
+      <div class="action-dock">
+        <div id="pin-status-hint" class="pin-hint hidden"></div>
+        <button id="btn-confirm-pin" class="confirm-pin-btn" disabled onclick="confirmPlayerGuess()">
+          📍 ¡LANZAR PIN!
+        </button>
+      </div>
+
+      <!-- Panel de Resultado del Turno (Compacto y visual) -->
+      <div id="turn-result-panel" class="turn-result-panel hidden">
+        <div class="result-header">
+          <span id="result-badge" class="result-badge">¡DIANA!</span>
+          <h3 id="result-headline">¡Más cerca que el bandido!</h3>
+        </div>
+
+        <div class="distance-comparison">
+          <div class="dist-box player-dist-box">
+            <span class="dist-label">📍 Tú</span>
+            <strong id="res-player-dist">120 km</strong>
+            <span id="res-player-dmg" class="dmg-tag good">0 HP</span>
+          </div>
+          <div class="vs-circle">VS</div>
+          <div id="res-enemy-box" class="dist-box enemy-dist-box">
+            <span class="dist-label">💣 Rival</span>
+            <strong id="res-enemy-dist">3,450 km</strong>
+            <span id="res-enemy-dmg" class="dmg-tag bad">-320 HP</span>
+          </div>
+        </div>
+
+        <div class="fact-card">
+          <span class="fact-icon">🎓</span>
+          <p id="res-fun-fact">Dato curioso</p>
+        </div>
+
+        <button id="btn-next-turn" class="next-turn-btn" onclick="nextTurnOrFinish()">
+          Siguiente →
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MODAL DE FIN DE PARTIDA / KNOCK-OUT ================= -->
+  <div id="endgame-modal" class="modal-overlay hidden">
+    <div class="modal-box center-modal">
+      <div id="endgame-avatar-box" class="endgame-avatar-box">
+        <img id="endgame-img" src="assets/bandit1.jpg" alt="Resultado" />
+      </div>
+      <div id="endgame-badge" class="badge-pill">¡VICTORIA!</div>
+      <h2 id="endgame-title">¡Has ganado!</h2>
+      <p id="endgame-quote" class="endgame-quote"></p>
+
+      <div id="knockout-rewards" class="knockout-rewards hidden">
+        <h3>🎁 Elige tu mejora:</h3>
+        <div class="rewards-grid">
+          <button class="reward-btn" onclick="claimKnockoutReward('heal')">
+            <span class="r-icon">❤️‍🩹</span>
+            <strong>+350 HP</strong>
+          </button>
+          <button class="reward-btn" onclick="claimKnockoutReward('shield')">
+            <span class="r-icon">🛡️</span>
+            <strong>Escudo</strong>
+          </button>
+          <button class="reward-btn" onclick="claimKnockoutReward('tools')">
+            <span class="r-icon">🔎</span>
+            <strong>+Gadgets</strong>
+          </button>
+        </div>
+      </div>
+
+      <div id="endgame-standard-actions" class="endgame-actions">
+        <button class="confirm-pin-btn" onclick="rematchCurrent()">🔄 Otra Vez</button>
+        <button class="secondary-btn" onclick="returnToMenu()">🏠 Menú</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <script src="locations.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
